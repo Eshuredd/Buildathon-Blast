@@ -1,0 +1,22 @@
+{
+  "revision": "eb11aec4be8cb2122afe713a4816662c3f0fb2fa",
+  "nodes": 1621,
+  "source_files": 364,
+  "coverage_contexts": 1684,
+  "collection_files": 59,
+  "fixtures": 4,
+  "function_ranges": 5286,
+  "reverse_import_edges": 1593,
+  "dynamic_import_files": [
+    "sqlglot/dialects/__init__.py",
+    "sqlglot/dialects/dialect.py",
+    "sqlglot/optimizer/__init__.py",
+    "sqlglot/serde.py",
+    "tests/test_docs.py",
+    "tests/test_typing.py"
+  ],
+  "syntax_errors": [],
+  "map_bytes": 1834646,
+  "map_uncompressed_bytes": 14841981,
+  "map_sha256": "8c64c0b6f9a2fabc1407608f9fcd9537c657673374bf87b88238bcffa166153a"
+}

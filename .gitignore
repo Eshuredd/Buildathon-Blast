@@ -1,3 +1,6 @@
 starter/
 PHASED_PROMPTS.md
 .phase1/
+.phase2/
+__pycache__/
+*.pyc

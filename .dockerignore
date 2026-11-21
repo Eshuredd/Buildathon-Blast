@@ -1,4 +1,9 @@
 starter/
 PHASED_PROMPTS.md
 .phase1/
+.phase2/
 .git/
+__pycache__/
+**/__pycache__/
+*.pyc
+tests/

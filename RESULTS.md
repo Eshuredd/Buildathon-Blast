@@ -134,3 +134,329 @@ Evidence includes HTTP headers, the downloaded archive and brief HTML, the publi
 ## Checkpoint and remaining limits
 
 No source, Docker, or baseline-execution blocker remains. Container restrictions were exercised by the unchanged Makefile. Container CPU accounting, CPU-inclusive total, median-of-three timing, and hidden practice/final budget checks remain unverified. These gaps do not change the exact 1210.470 simulated sample seconds or the zero observed misses. Stopped before selector or scheduler implementation, reusable map generation, or Phase 2.
+
+
+# Phase 2 — scheduler control, reusable maps, and file selection
+
+Completed 2026-11-21 (Asia/Kolkata). The authoritative checkout remains
+/home/eshum/Buildathon-Blast on WSL2 ext4. Its Windows review mirror is
+C:/Users/eshum/OneDrive/Desktop/Buildathon-Blast. Phase 1's historical
+single-run, CPU-unmeasured result above is unchanged; the new rows below use
+complete container CPU accounting. No repository was published or submitted.
+No line-level narrowing or independent holdout work was performed.
+
+## Source access and pinned environment
+
+The official brief was downloaded again with HTTP 200 to
+/home/eshum/blast-phase2-evidence/brief.html from
+https://www.joinbuilders.org/buildathon/tracks/blast-radius.
+The original starter and bundled scoring specification from Phase 1 remain the
+reference. All 39 archived starter files were rechecked byte-for-byte after
+Phase 2: zero differences. The starter image and all-tests scheduler image
+remain available as local controls.
+
+Pinned source was downloaded successfully from
+https://codeload.github.com/tobymao/sqlglot/tar.gz/eb11aec4be8cb2122afe713a4816662c3f0fb2fa
+and extracted outside the submission tree at
+/home/eshum/blast-bootstrap/sqlglot-eb11aec4be8cb2122afe713a4816662c3f0fb2fa.
+Archive SHA-256:
+93b2445f15f395b81c20556777ece19a6c7507df950f13fa9fac4a3be739af0d.
+The regeneration script verifies this archive hash.
+
+Bootstrap used the exact pinned Python base from Phase 1, installed the
+unchanged official requirements.lock, and added coverage==7.10.7 from PyPI.
+No SQLGlot source was installed from another revision. Reference pytest runs
+used PYTHONPATH=/src, SKIP_INTEGRATION=0, no network, a two-CPU quota, 4 GiB
+RAM, a 256-process limit, and two-CPU affinity (0,1). The upstream source
+mount was read-only.
+
+The clean uninstrumented full suite passed: 1620 passed, one skipped,
+25,440 passing subtests; pytest wall 108.06 s, complete Docker-command wall
+113.11 s. The successful instrumented full suite also passed with the same
+counts; pytest wall 262.52 s, complete Docker-command wall 274.51 s.
+These are base-revision reference runs, not runtime selector budget checks.
+
+Two unsuccessful instrumentation attempts were retained separately and
+excluded from the maps. The first lacked a multiprocessing main guard,
+causing spawned processes to re-enter pytest; it was interrupted and fixed.
+The next exposed host over-parallelism: process pools saw 16 logical CPUs
+despite a two-CPU quota, and the 256-process/thread cgroup limit was hit
+(pids.events max=28; no OOM kills). It was interrupted. Two-CPU affinity
+fixed that issue; the final run recorded no pids-limit hits or test failures.
+
+The final collector passes the submitting test context into reused
+ProcessPoolExecutor tasks, combines child and parent coverage, records
+collection and phase-specific coverage, and audits Python reads of repository
+files. A separate two-test process-pool smoke run passed with 65 subtests
+and verified the final collector writes its combined .coverage file.
+The successful full run's parallel coverage files were combined using the
+official coverage CLI; the collector now writes the same combined format
+directly. Empty combined measurements are rejected by the map compiler.
+
+Coverage process handling follows
+https://coverage.readthedocs.io/en/7.10.7/subprocess.html .
+The initial empty-map compile was detected by the join audit, discarded,
+and replaced with maps compiled from the complete combined measurements.
+It was not used in a scored container benchmark.
+
+## Scheduler-only control before selection changes
+
+The new scheduler was implemented, built, and benchmarked with every test
+selected before file selection was added. It tries worker counts 1 through
+min(8, selected test count), orders by descending round(seconds * 1000) and
+ascending test number, and assigns to the least-loaded worker with ascending
+worker-index ties. It minimizes peak load plus 2000 ms per nonempty worker,
+with fewer workers preferred on equal cost. It emits [] for zero tests.
+
+The 1620-test control chooses four workers, costing 36.817 simulated seconds
+per patch, compared with the starter's three-worker 40.349 seconds.
+The original starter selector and its scheduling implementation were preserved.
+
+## Reusable maps and manifest join
+
+The compact map contains only data derived from pinned source and its
+reference test run. Its generator reads no sample manifest, patch, commit ID,
+or expected answer. Runtime test numbers are joined by pytest node ID.
+Manifest joining is a separate evaluation-side command.
+
+| Measurement | Result |
+| --- | ---: |
+| Compressed base-map.json.gz | 1,834,646 bytes |
+| Uncompressed compact JSON | 14,841,981 bytes |
+| Base source file identities / hashes | 364 |
+| Map node IDs | 1621 |
+| Numbered manifest tests matched | 1620 / 1620 |
+| Unmatched numbered node IDs | 0 |
+| Numbered nodes without call coverage | 0 |
+| Extra map nodes | 1 (the unnumbered skipped test) |
+| Coverage contexts | 1684 |
+| Collection file contexts | 59 |
+| Function ranges | 5286 |
+| Static reverse import edges | 1593 |
+| Fixture relationships / node edges | 4 / 280 |
+| Fixture resource-read edges | 35 |
+| Base AST syntax errors | 0 |
+
+Map SHA-256: 8c64c0b6f9a2fabc1407608f9fcd9537c657673374bf87b88238bcffa166153a.
+
+A second map compilation from the same raw measurements was byte-identical.
+The complete capture/compile workflow is reproducible through
+tools/regenerate.sh; that full script was not rerun end-to-end after the
+successful capture. A fresh capture can vary in observational coverage;
+no claim of byte-identical coverage across independent captures is made.
+
+All 1620 numbered tests have call-phase source coverage. No source lines
+occurred directly in pytest's setup phase; unittest's per-test setup is
+inside its call phase, and class setup is separately stored in the four
+fixture contexts. One node has directly attributed teardown source lines.
+Shared setup/teardown file dependencies are broadened to the whole test
+file. Pytest-generated unittest class fixtures are joined to all class
+members. Unknown external fixture contexts broaden to all nodes.
+
+The map also includes per-node line intervals, function ranges, source hashes,
+collection effects, observed resource reads, fixture membership and static
+reverse imports. Phase 2 selection consults file identities only. It does not
+use hunk line numbers, line intervals, or enclosing functions to narrow tests.
+
+## Valid container benchmark results
+
+All three runs per control/candidate passed the unchanged official scorer.
+Container CPU is measured as the difference in user_usec + system_usec in an
+exclusive retained parent cgroup, after each container and every process in it
+has exited. The parent is in the Docker Desktop VM and remains after Docker
+removes the child cgroup. No build, host scorer, Docker CLI, map generator, or
+other workload runs in that parent. This closes Phase 1's CPU-accounting gap
+for these fresh runs.
+
+Scored containers use every starter runtime restriction, plus
+--cgroup-parent=/blast-phase2-accounting for accounting only. No measurement
+wrapper or extra process runs in the scored container. Each wall measurement
+below is the host Docker run command, including startup/removal; it is kept
+separate from container CPU.
+
+| Version / run | Batch | Missed commits | Simulated seconds | Container user s | Container system s | Container CPU s | Official total s | Wall s | Stdout bytes |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| unchanged-starter / 1 | sample 30 | 0 | 1210.470 | 0.098795 | 0.055983 | 0.154778 | 1210.624778 | 0.717993 | 259,440 |
+| unchanged-starter / 2 | sample 30 | 0 | 1210.470 | 0.126851 | 0.025774 | 0.152625 | 1210.622625 | 0.529317 | 259,440 |
+| unchanged-starter / 3 | sample 30 | 0 | 1210.470 | 0.102633 | 0.047701 | 0.150334 | 1210.620334 | 0.536250 | 259,440 |
+| scheduler-control / 1 | sample 30 | 0 | 1104.510 | 0.169961 | 0.032028 | 0.201989 | 1104.711989 | 0.613327 | 210,840 |
+| scheduler-control / 2 | sample 30 | 0 | 1104.510 | 0.161977 | 0.044215 | 0.206192 | 1104.716192 | 0.594188 | 210,840 |
+| scheduler-control / 3 | sample 30 | 0 | 1104.510 | 0.155698 | 0.025516 | 0.181214 | 1104.691214 | 0.591266 | 210,840 |
+| file-level / 1 | sample 30 | 0 | 417.095 | 0.545967 | 0.229210 | 0.775177 | 417.870177 | 1.051778 | 62,853 |
+| file-level / 2 | sample 30 | 0 | 417.095 | 0.505151 | 0.251337 | 0.756488 | 417.851488 | 0.993003 | 62,853 |
+| file-level / 3 | sample 30 | 0 | 417.095 | 0.549059 | 0.222977 | 0.772036 | 417.867036 | 0.999508 | 62,853 |
+| file-level stress / 1 | simulated final 45 | 0 | 682.415 | 0.595142 | 0.268740 | 0.863882 | 683.278882 | 1.089187 | 103,299 |
+
+| Version | Median of three valid totals, seconds | Rounded local score (half-up, 0.1 s) | Byte-identical stdout |
+| --- | ---: | ---: | --- |
+| unchanged-starter | 1210.622625 | 1210.6 | Yes |
+| scheduler-control | 1104.711989 | 1104.7 | Yes |
+| file-level | 417.867036 | 417.9 | Yes |
+
+The published 1614.1-second baseline remains a separate contest reference.
+The local recall-first order and official score order agree: file-level,
+scheduler-only, then unchanged starter; every candidate had zero sample
+misses. The file-level candidate is the best verified local sample version
+and remains available as blast-file-selector. These sample results do not
+establish unseen-patch recall or clear the Phase 3 independent holdout gate.
+
+File-level output selected 14,433 tests in total across the 30 patches,
+ranging from 1 to 1620 per patch. Twenty-two patches used bounded file
+dependencies; eight used a full-suite fallback due to a dynamic-import
+dependency. These were also the eight full-suite selections. Occupied worker
+counts were 1, 2, or 4. File-level stdout was 62,853 bytes, comfortably below
+2 MB, and byte-identical across the three containers.
+
+The 30-patch sample runs used a 180-second external timeout and completed in
+about one second. The 45-patch local stress batch repeated official sample
+patches with fresh opaque filenames, retaining labels only in the evaluation
+harness. It is explicitly a simulated final-size batch, not unseen commits or
+a measured official final batch. Its one valid run used a 270-second timeout,
+took 1.089187 s wall, emitted 103,299 bytes and missed zero of 45. No median
+submission score is claimed for this single stress run. Hidden practice and
+final batch counts, behavior and timing remain unverified.
+
+## Fallbacks and limitations
+
+The complete patch must parse as a supported UTF-8 unified diff, including
+all sections and hunk lengths. Lookup paths normalize backslashes without
+altering raw patch bytes. Binary/invalid encoding, malformed or truncated
+hunks, unexpected trailing data, unsupported metadata, renames, additions,
+deletions, unknown files, configuration, source AST errors, dynamic-import
+dependencies, global collection dependencies, or no bounded observed
+dependency select the full suite. Comment edits are not assumed harmless.
+
+For supported edits, selection unions file-level execution/read dependencies,
+collection effects, shared fixture relationships and reverse imports, and
+includes tests in affected test files. If a numbered manifest node lacks a
+map entry, all manifest tests from its file are retained conservatively.
+Nodes without call coverage are always retained. A missing, corrupt or
+wrong-revision map falls back to all tests. Empty manifests still emit [].
+
+Coverage cannot prove all future execution paths, especially added behavior,
+dynamic state, native-extension file reads or unobserved resources. The current
+selector is deliberately broad, but zero misses on these samples does not
+prove hidden recall. Independent patches and the mandatory Phase 3 gate remain
+outstanding. No line-level narrowing has begun.
+
+Eight focused checks pass for scheduler cost/ties/determinism, full patch
+parsing, malformed/truncated/unknown patches, insertion-only hunks, separator
+normalization with byte preservation, invalid maps, and missing node fallback.
+The shell regeneration script passes bash -n, and Python files compile.
+
+## Clean submission build and source audit
+
+An early clean trial used the actual root Dockerfile and intended context
+while the scheduler control was still the implementation. It passed in
+30.45 seconds, including first startup of the dedicated BuildKit builder.
+After the map and file selector were ready, another clean trial with
+--no-cache --pull passed in 2.80 seconds.
+
+The dedicated docker-container builder uses moby/buildkit:v0.24.0 from
+Docker Hub. Its inspected configuration is cpu_quota=400000,
+cpu_period=100000, memory=8589934592 and memory-swap=8589934592: four CPUs
+and 8 GiB. An external timeout enforces 600 seconds, with a five-second kill
+grace. Host WSL RAM is about 7.5 GiB, so actual available physical memory is
+slightly below the configured build cap. Neither build needed that capacity.
+The final build reused pinned base layers but no Dockerfile instruction cache.
+
+The final image is linux/amd64, 44,916,925 reported bytes, image ID
+sha256:6abdb53fab2da8bc197b9f516dd097bdab4c53929719ba7008438706cdc5d57b.
+Its /app contains exactly selector.py, scheduler.py, impact.py, and
+maps/base-map.json.gz. The map is readable by UID/GID 65534 (mode 0644).
+No upstream checkout, raw coverage, tests, patches, labels, or evaluation
+harness is copied into the submission image.
+
+Download audit: the actual submission Dockerfile has no RUN/download steps
+and references only the pinned Python image on Docker Hub. Local bootstrap
+downloads were the official kit, the fixed SQLGlot revision, public PyPI
+packages, and the fixed-tag BuildKit image. The runtime uses only the Python
+standard library and no network. Root .gitignore/.dockerignore exclude the
+starter, raw/evaluation directories, and instruction-only phase prompts;
+all source checkouts and raw measurements remain outside the submission tree.
+
+## Commands and evidence
+
+Commands ran through Windows RTK's WSL proxy; the following are Linux commands
+from /home/eshum/Buildathon-Blast unless indicated otherwise.
+
+~~~bash
+# Full pinned reference run (source checkout outside the submission).
+docker run --rm --platform linux/amd64 --network none --cpus 2 \
+  --cpuset-cpus 0,1 --memory 4096m --memory-swap 4096m --pids-limit 256 \
+  -e SKIP_INTEGRATION=0 -e PYTHONPATH=/src \
+  -v /home/eshum/blast-bootstrap/sqlglot-eb11aec4be8cb2122afe713a4816662c3f0fb2fa:/src:ro \
+  blast-map-bootstrap python -m pytest tests -q -p no:cacheprovider
+
+# Reusable complete capture and map-generation workflow.
+bash tools/regenerate.sh /home/eshum/blast-regeneration
+
+# Actual compilation used the successful raw run:
+docker run --rm --platform linux/amd64 --network none --cpus 2 \
+  --memory 4096m --memory-swap 4096m --pids-limit 256 \
+  -v /home/eshum/blast-bootstrap/sqlglot-eb11aec4be8cb2122afe713a4816662c3f0fb2fa:/src:ro \
+  -v /home/eshum/Buildathon-Blast/tools:/tools:ro \
+  -v /home/eshum/blast-phase2-evidence/raw:/raw \
+  -v /home/eshum/Buildathon-Blast/maps:/maps \
+  blast-coverage-bootstrap python /tools/generate_maps.py --source /src --raw /raw --out /maps
+python3 tools/check_maps.py --map maps/base-map.json.gz \
+  --manifest starter/sample/tests.json \
+  --out /home/eshum/blast-phase2-evidence/manifest-join.json
+
+# Capped builder setup and actual final clean trial.
+docker buildx create --name blast-phase2-local --driver docker-container \
+  --driver-opt image=moby/buildkit:v0.24.0 --driver-opt memory=8g \
+  --driver-opt memory-swap=8g --driver-opt cpu-period=100000 \
+  --driver-opt cpu-quota=400000
+timeout --signal=TERM --kill-after=5s 600s docker buildx build \
+  --builder blast-phase2-local --platform linux/amd64 --no-cache --pull \
+  --load --tag blast-file-selector .
+
+python3 tools/benchmark.py --image blast-radius-entry --version unchanged-starter
+python3 tools/benchmark.py --image blast-scheduler-control --version scheduler-control --mode all
+python3 tools/benchmark.py --image blast-file-selector --version file-level --mode file
+python3 tools/benchmark.py --image blast-file-selector --version simulated-final45 \
+  --mode file --sample /home/eshum/blast-phase2-evidence/stress45 --runs 1 --timeout 270
+make test
+~~~
+
+The successful capture used the first reference command's restrictions plus
+BLAST_RAW_DIR=/raw, read-only /tools, writable external /raw, and
+python /tools/collect_coverage.py; an external 1200-second limit bounded map
+capture. The exact scored Docker commands, before/after cgroup counters,
+individual outputs and hashes are stored in the benchmark JSON files.
+
+Evidence is at /home/eshum/blast-phase2-evidence, including successful and
+unsuccessful run logs, raw coverage, compiler/join reports, build logs and
+resource inspection, benchmark JSON, and output files. Only compact maps,
+scripts, code, tests and documentation belong in Git. A review subset of
+evidence is mirrored under the ignored Windows .phase2/evidence directory.
+
+## Phase 2 checkpoint
+
+Scheduler control, maps, manifest join, file-level selection and the capped
+clean build are complete. No blocking source, dependency, Docker or test
+failure remains. Independent holdout recall, hidden batch budgets and final
+packaging are unverified and intentionally deferred. Stop here before
+line-level narrowing.
+
+
+## Local repository size and handoff
+
+Git was initialized locally for Phase 2 so the compact map and generation
+scripts can be preserved together. No remote is configured. Since Ubuntu had
+no Git author identity, this repository uses the local-only identity
+Codex <codex@local.invalid>; global Git configuration was not changed.
+
+The tracked submission snapshot contains 23 files totaling 1,918,766 bytes,
+below the 20,000,000-byte cap. This measures file contents, excluding .git,
+the ignored starter, evaluation artifacts, raw coverage and external source.
+The map itself is 1,834,646 bytes. Git ignore checks confirm that the starter's
+selector, sample labels, phase prompts and local evidence are excluded.
+The staged diff has no whitespace errors. The local Phase 2 commit is the
+handoff checkpoint; obtain its SHA with git rev-parse HEAD.
+
+All implementation and map files are mirrored for review in the attached
+Windows folder. Continue execution and Git operations from the Linux
+checkout. The clean final image and the unchanged controls remain available
+locally. No Phase 3 or final submission packaging was performed.
