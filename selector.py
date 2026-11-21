@@ -1,4 +1,4 @@
-"""Runtime file-level selector with an all-tests scheduling control."""
+"""Runtime selector with line, file, and all-tests modes."""
 import argparse
 import json
 import sys
@@ -8,14 +8,19 @@ from scheduler import schedule
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", choices=("all", "file"), default="file")
+    parser.add_argument("--mode", choices=("all", "file", "line"), default="line")
     parser.add_argument("--data", type=Path, default=Path("/data"))
     args = parser.parse_args()
     tests = json.loads((args.data / "tests.json").read_bytes())["tests"]
     selector = None
-    if args.mode == "file":
+    map_dir = Path(__file__).parent / "maps"
+    if args.mode == "line":
+        from line_impact import LineSelector
+        selector = LineSelector(tests, map_dir / "base-map.json.gz",
+                                map_dir / "return-sites.json.gz")
+    elif args.mode == "file":
         from impact import FileSelector
-        selector = FileSelector(tests, Path(__file__).parent / "maps/base-map.json.gz")
+        selector = FileSelector(tests, map_dir / "base-map.json.gz")
     all_workers = schedule(tests)
     cache = {}
     reasons = Counter()

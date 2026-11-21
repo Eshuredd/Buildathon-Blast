@@ -1,11 +1,13 @@
 import gzip
+import hashlib
 import json
 import random
 import tempfile
 import unittest
 from pathlib import Path
 from scheduler import schedule
-from impact import FileSelector, UnboundedPatch, affected_files, REVISION
+from impact import FileSelector, UnboundedPatch, affected_files, parse_patch, REVISION
+from line_impact import LineSelector, bounds_for_hunk
 
 def patch(path="sqlglot/a.py"):
     return (f"diff --git a/{path} b/{path}\nindex 1234567..abcdef0 100644\n"
@@ -95,10 +97,91 @@ class ConservativeMapTests(unittest.TestCase):
             selector=self.fixture(d,missing=True)
             self.assertEqual(selector.select(patch())[0],{0,1})
 
+    def test_truncated_gzip_map_falls_back(self):
+        tests = [
+            {"number": n, "id": f"tests/t.py::test_{n}", "file": "tests/t.py", "seconds": 0}
+            for n in range(2)
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "map.gz"
+            path.write_bytes(gzip.compress(b'{"schema":1}')[:-4])
+            with self.assertRaises(EOFError):
+                gzip.decompress(path.read_bytes())
+            selector = FileSelector(tests, path)
+            self.assertEqual(selector.select(patch())[0], {0, 1})
+
     def test_bad_map_falls_back(self):
         tests=[{"number":0,"id":"tests/t.py::a","file":"tests/t.py","seconds":0}]
         selector=FileSelector(tests,"/no-such-map.gz")
         self.assertEqual(selector.select(patch())[0],{0})
+
+class LineSelectionTests(unittest.TestCase):
+    def test_old_coordinates_after_insertion_and_context(self):
+        raw = (b"diff --git a/sqlglot/a.py b/sqlglot/a.py\n"
+               b"--- a/sqlglot/a.py\n+++ b/sqlglot/a.py\n"
+               b"@@ -7,3 +7,4 @@\n"
+               b"     a = 2\n+    a = 3\n     if a:\n-        return a\n+        return 1\n")
+        hunk = parse_patch(raw)["sqlglot/a.py"][0]
+        self.assertEqual(hunk, [(7, "     a = 2"), (8, "+    a = 3"),
+                                (8, "     if a:"), (9, "-        return a"),
+                                (10, "+        return 1")])
+
+    def test_return_anchor_and_fallback(self):
+        old = "    return n"
+        digest = hashlib.sha256(old.encode()).hexdigest()
+        sites = {"3": (1, 4, digest)}
+        self.assertEqual(bounds_for_hunk([(3, "-" + old), (4, "+    return 1")],
+                                         sites, False), (1, 4))
+        for hunk in (
+            [(4, "-" + old), (5, "+    return 1")],
+            [(3, "-    return m"), (4, "+    return 1")],
+            [(3, "-" + old), (4, "+        return 1")],
+            [(3, "-" + old), (4, "+    return other")],
+            [(3, "-" + old), (4, "+    return eval(n)")],
+            [(3, "-" + old), (4, "+    return 1 # comment")],
+        ):
+            self.assertIsNone(bounds_for_hunk(hunk, sites, True))
+        inserted = [(3, "+    return 1"), (3, " " + old)]
+        self.assertIsNone(bounds_for_hunk(inserted, sites, False))
+        self.assertEqual(bounds_for_hunk(inserted, sites, True), (1, 4))
+        self.assertIsNone(bounds_for_hunk(inserted[:1], sites, True))
+
+    def test_runtime_uses_enclosing_function_and_falls_back_for_unknown_sections(self):
+        path = "sqlglot/a.py"
+        tests = [
+            {"number": i, "id": f"tests/test_a.py::test_{i}", "file": "tests/test_a.py",
+             "seconds": 1} for i in range(3)
+        ]
+        base = {
+            "schema": 1, "revision": REVISION, "files": [path],
+            "source_sha256": {path: "base source hash"},
+            "global": {"lines": [], "reads": []}, "collection": {},
+            "reverse_imports": {}, "dynamic_import_files": [], "fixtures": {},
+            "nodes": {
+                t["id"]: {"phases": {"setup": [], "call": [[0, [[line, line]]]], "teardown": []},
+                          "reads": {"setup": [], "call": [], "teardown": []}, "fixtures": []}
+                for t, line in zip(tests, [2, 3, 8])
+            },
+        }
+        sites = {"schema": 1, "revision": REVISION, "files": {
+            path: {"source_hash": "base source hash", "returns": {
+                "3": [1, 3, hashlib.sha256(b"    return n").hexdigest()],
+            }},
+        }}
+        raw = (b"diff --git a/sqlglot/a.py b/sqlglot/a.py\n"
+               b"--- a/sqlglot/a.py\n+++ b/sqlglot/a.py\n"
+               b"@@ -3 +3 @@\n-    return n\n+    return 1\n")
+        with tempfile.TemporaryDirectory() as tmp:
+            base_path, sites_path = Path(tmp) / "base.gz", Path(tmp) / "sites.gz"
+            base_path.write_bytes(gzip.compress(json.dumps(base).encode()))
+            sites_path.write_bytes(gzip.compress(json.dumps(sites).encode()))
+            selector = LineSelector(tests, base_path, sites_path)
+            self.assertEqual(selector.select(raw)[0], {0, 1})
+            self.assertEqual(selector.select(raw + patch("sqlglot/unknown.py"))[0], {0, 1, 2})
+            self.assertEqual(selector.select(raw.replace(b"return n", b"return m"))[0], {0, 1, 2})
+            sites_path.write_bytes(sites_path.read_bytes()[:-4])
+            self.assertEqual(LineSelector(tests, base_path, sites_path).select(raw)[0], {0, 1, 2})
+
 
 if __name__=="__main__":
     unittest.main()

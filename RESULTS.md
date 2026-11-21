@@ -460,3 +460,174 @@ All implementation and map files are mirrored for review in the attached
 Windows folder. Continue execution and Git operations from the Linux
 checkout. The clean final image and the unchanged controls remain available
 locally. No Phase 3 or final submission packaging was performed.
+
+
+# Phase 3 — development checkpoint before manual commit
+
+Started from WSL commit 33bc72c269710e1998fcb054c5c2fbf56b8a95f1 with a clean tree. The original Phase 2
+image is preserved as blast-phase2-control, image
+sha256:6abdb53fab2da8bc197b9f516dd097bdab4c53929719ba7008438706cdc5d57b.
+The Phase 3 candidate retains --mode file. The Phase 2 baseline benchmark
+below uses the original preserved image and ran before line selection.
+The official brief was fetched again and the bundled SCORING.md governs the
+formula. The environment and pinned image remain as recorded above.
+
+## Frozen patch split and reference runs
+
+Starting plan covers eight independently authored patches against SQLGlot
+at eb11aec4be8cb2122afe713a4816662c3f0fb2fa. Before development benchmarking,
+four were assigned to development and four to the primary holdout. Four
+replacement patches were predesignated in separate reserve slots. Each
+partition contains an added-code, fixture, import-time, and unaffected case.
+All twelve diffs passed git apply --check against the base. Split ledger
+SHA-256 is f90d18b03d1a845fe79f6f856be701187ae9760938a26fc7092dfaa6dff8473d. The external evaluation directory is
+/home/eshum/blast-phase3-eval. Primary holdout and reserve archives are
+sealed there. Their contents were left sealed throughout tuning, and
+their ground truth has yet to be run. The same local author created the
+patches and ran development, with separation enforced through the frozen
+split and by withholding holdout contents and results during tuning.
+
+Before patch execution the base suite passed 1620 tests, with one skip and
+25,440 passing subtests in 101.59 seconds of pytest time and 106.84 seconds
+for the Docker command. At that measured rate the initial eight patches
+were estimated at 854.72 seconds and the four replacement slots at a further
+427.36 seconds, for 1388.92 seconds including the base run. The overall limit
+is 1800 seconds of reference wall time and 30 patch slots.
+
+Each development patch was applied alone to a fresh copy of the pinned source.
+Reference runs used blast-map-bootstrap, the starter lock and pinned image,
+SKIP_INTEGRATION=0, network disabled, two CPUs with affinity 0,1, 4 GiB and
+256 processes. Pytest ran the full tests directory in a fresh container for
+each patch with --continue-on-collection-errors and --timeout=120. The
+evaluation-only pytest plugin recorded setup, call, teardown and subtest
+reports. Labels include failing subtest parents and all numbered nodes in
+an unimportable test file, per the official scoring specification. The
+base run verifies those failures are absent on the pinned revision.
+
+| Development case | Reference Docker wall s | Failing manifest tests | Evidence |
+| --- | ---: | ---: | --- |
+| added code | 103.282 | 11 | 11 failed call reports |
+| fixture | 102.937 | 1 | 1 failed subtest joined to its parent |
+| import-time | 103.828 | 15 | 1 collection error covering all 15 numbered tests in the file |
+| unaffected | 101.524 | 0 | All 1620 numbered tests passed |
+
+Reference wall used including base is 518.41
+seconds. Four of the 30 patch slots have been executed. All development
+cases were labeled. Primary and replacement cases are pending.
+
+## Development benchmark
+
+There are three expected failing commits across four patches. Each scored
+candidate missed 0 of 3, for 100% development commit recall. The official
+scorer and retained Docker cgroup measured the following with the same
+runtime flags as Phase 2. Wall time covers the Docker command. CPU totals
+are user plus system time in the container. The stress batches repeat
+development patches and use 180-second and 270-second timeouts for the
+30-patch and 45-patch runs respectively. These are simulated batch sizes.
+
+| Version | Batch and run | Missed commits | Simulated s | CPU user s | CPU system s | Container CPU s | Total s | Wall s | Stdout bytes |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Phase 2 file control | development 4 / 1 | 0 | 77.728 | 0.548796 | 0.209563 | 0.758359 | 78.486359 | 1.045189 | 14,156 |
+| Phase 2 file control | development 4 / 2 | 0 | 77.728 | 0.529356 | 0.216723 | 0.746079 | 78.474079 | 0.992287 | 14,156 |
+| Phase 2 file control | development 4 / 3 | 0 | 77.728 | 0.485176 | 0.254746 | 0.739922 | 78.467922 | 0.971443 | 14,156 |
+| Return replacements | development 4 / 1 | 0 | 66.365 | 0.566178 | 0.253916 | 0.820094 | 67.185094 | 1.104389 | 7,234 |
+| Return replacements | development 4 / 2 | 0 | 66.365 | 0.562418 | 0.222552 | 0.784970 | 67.149970 | 1.065578 | 7,234 |
+| Return replacements | development 4 / 3 | 0 | 66.365 | 0.576597 | 0.188218 | 0.764815 | 67.129815 | 1.006767 | 7,234 |
+| Return replacements and insertions | development 4 / 1 | 0 | 55.002 | 0.588544 | 0.272943 | 0.861487 | 55.863487 | 1.117570 | 360 |
+| Return replacements and insertions | development 4 / 2 | 0 | 55.002 | 0.538486 | 0.237904 | 0.776390 | 55.778390 | 1.006416 | 360 |
+| Return replacements and insertions | development 4 / 3 | 0 | 55.002 | 0.568964 | 0.228396 | 0.797360 | 55.799360 | 1.046062 | 360 |
+| Frozen draft stress | simulated 30 / 1 | 0 | 412.474 | 0.593700 | 0.236624 | 0.830324 | 413.304324 | 1.076046 | 2,919 |
+| Frozen draft stress | simulated 45 / 1 | 0 | 630.476 | 0.580431 | 0.225525 | 0.805956 | 631.281956 | 1.072911 | 4,428 |
+
+| Candidate in recall-first rank order | Missed / expected | Median total s | Half-up score s |
+| --- | ---: | ---: | ---: |
+| Return replacements and insertions | 0 / 3 | 55.799360 | 55.8 |
+| Return replacements | 0 / 3 | 67.149970 | 67.1 |
+| Phase 2 file control | 0 / 3 | 78.474079 | 78.5 |
+
+The three runs per candidate produced byte-identical stdout. Recall-first
+rank agrees with official cost order. The chosen candidate's two bounded
+function edits selected 32 and 23 tests respectively. The fixture case
+selected its one failing test and the import case selected its 15 affected
+tests through the file-level rules. Both synthetic budget runs finished in
+under 1.1 seconds. Their hidden-batch analogues remain unverified. The
+official sample is a separate post-freeze check and was excluded from tuning.
+
+The next potential reduction would require attribution that distinguishes
+source reads from import reads. Current observations cannot support
+discarding these readers safely, so tuning stopped with the best development
+candidate. The baseline and both candidate images remain available locally.
+
+## Frozen draft rules and checks
+
+The candidate uses verified old-side return anchors from 132 files and 4406
+statements. The new map takes 165,814 bytes and has SHA-256
+6989fc63e8ffd3b29907397094f5753cd59910e334e10b8a273cf0aaa8ac41b1.
+The original base map is unchanged. The generator hashes pinned source
+bytes against the base map and does not read patches, labels or the manifest.
+The default mode is line, with ALLOW_INSERTIONS = True. These values and all
+fallback rules are part of the manual commit.
+
+A hunk qualifies only when it has one new simple return, either replacing a
+verified old return or inserted immediately before an exact, verified old-side
+context return. Candidates require the original indentation and use a bounded
+expression vocabulary with no new name references. Function ranges bound
+coverage, with direct source-read, fixture, collection and setup/teardown
+broadening. Whole-patch validation comes first. Zero-context insertion,
+unknown coordinates, comments, mixed eligible and ineligible hunks, dynamic
+modules, or unobserved functions preserve file-level or full-suite fallback
+as applicable. Rename, deletion and unsupported metadata take the full
+fallback. Top-level changes and changes in test and fixture files continue
+through the file-level rules. Missing base-map entries preserve existing
+broadening. A truncated base gzip now selects the full suite by catching
+EOFError. A missing or truncated return-site map reuses file selection.
+
+All 12 focused and existing checks passed using make test. New checks cover
+truncated gzip, parsed old-side positions, anchor verification, enclosing
+function selection, and mixed or unknown section fallback. The return
+anchors were regenerated from the frozen base source. The Dockerfile still
+builds with the pinned base and standard library only. Development scoring
+ran in fresh linux/amd64 containers with the official CPU, RAM, process,
+network, UID, read-only filesystem and /tmp limits.
+
+## Reproduction and manual checkpoint
+
+~~~bash
+cd /home/eshum/Buildathon-Blast
+make test
+python3 /home/eshum/blast-phase3-eval/label.py development
+python3 tools/benchmark.py --evidence /home/eshum/blast-phase3-eval \
+  --image blast-phase2-control --version phase2-development \
+  --sample /home/eshum/blast-phase3-eval/development
+docker build --platform linux/amd64 -t blast-phase3-line-insertions .
+python3 tools/benchmark.py --evidence /home/eshum/blast-phase3-eval \
+  --image blast-phase3-line-insertions --version line-insertions-dev \
+  --sample /home/eshum/blast-phase3-eval/development
+~~~
+
+The label command reuses completed reports. The evaluation harness, raw logs,
+patches and labels are outside both Git checkouts and Docker build contexts.
+The exact Docker commands, output hashes, per-run cgroup counters and split
+ledger are in the external evaluation directory.
+
+| Manual commit file | Purpose |
+| --- | --- |
+| Dockerfile | Copy the narrowing code and pinned return anchors into the image |
+| README.md | Describe selection and map regeneration |
+| RESULTS.md | Record development and budget evidence |
+| impact.py | Record old-side hunk coordinates and catch truncated gzip |
+| line_impact.py | Implement return and function selection |
+| maps/return-sites.json.gz | Supply compact pinned source anchors |
+| selector.py | Make the frozen line rules the runtime default |
+| tests/test_selector.py | Verify regressions and fallbacks |
+| tools/generate_line_sites.py | Reproduce the anchor map |
+
+The frozen draft is awaiting the user's manual commit SHA. Final development,
+independent holdout and official sample benchmarks are pending. The holdout
+gate is unverified.
+
+The draft submission contains 26 files totaling 2,109,533 bytes, including
+both compressed maps. This is below the 20,000,000-byte cap. A second compile
+of the return-site map produced identical bytes. The Phase 3 files are present
+in the GitHub Desktop checkout and the WSL working tree, with both Git indexes
+unchanged.

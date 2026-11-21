@@ -6,7 +6,7 @@ from collections import defaultdict, deque
 from pathlib import Path
 
 REVISION = "eb11aec4be8cb2122afe713a4816662c3f0fb2fa"
-HUNK = re.compile(r"@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(?:.*)?")
+HUNK = re.compile(r"@@ -([0-9]{1,10})(?:,([0-9]{1,10}))? \+([0-9]{1,10})(?:,([0-9]{1,10}))? @@(?:.*)?")
 HEADER = re.compile(r"diff --git (a/\S+) (b/\S+)")
 INDEX = re.compile(r"index [0-9a-f]+\.\.[0-9a-f]+(?: [0-7]+)?")
 
@@ -21,7 +21,7 @@ def normalized(path):
         raise UnboundedPatch("ambiguous path")
     return path
 
-def affected_files(raw):
+def parse_patch(raw):
     """Validate every byte's decoded line and every hunk count; never rewrite input."""
     try:
         text = raw.decode("utf-8")
@@ -29,10 +29,10 @@ def affected_files(raw):
         raise UnboundedPatch("non-UTF8 patch") from error
     if "\x00" in text or "\r" in text:
         raise UnboundedPatch("binary or unexpected line endings")
-    lines = text.splitlines()
-    if not lines:
+    lines = text.removesuffix("\n").split("\n")
+    if not text:
         raise UnboundedPatch("empty patch")
-    paths, index = [], 0
+    paths, index = {}, 0
     while index < len(lines):
         match = HEADER.fullmatch(lines[index])
         if not match:
@@ -49,7 +49,7 @@ def affected_files(raw):
                 or normalized(lines[index + 1][6:]) != after):
             raise UnboundedPatch("new, deleted, metadata-only or unsupported file")
         index += 2
-        hunks = 0
+        hunks = []
         previous_old, previous_new = -1, -1
         while index < len(lines) and not lines[index].startswith("diff --git "):
             match = HUNK.fullmatch(lines[index])
@@ -66,25 +66,34 @@ def affected_files(raw):
             previous_old, previous_new = old_start + old_count, new_start + new_count
             index += 1
             old_seen, new_seen, changes = 0, 0, 0
+            hunk = []
+            old_anchor = old_start + (old_count == 0)
             while old_seen < old_count or new_seen < new_count:
                 if index >= len(lines) or not lines[index] or lines[index][0] not in " +-":
                     raise UnboundedPatch("truncated hunk")
+                hunk.append((old_anchor + old_seen, lines[index]))
                 sign = lines[index][0]
                 old_seen += sign in " -"
                 new_seen += sign in " +"
                 changes += sign in "+-"
                 index += 1
                 if index < len(lines) and lines[index] == r"\ No newline at end of file":
+                    hunk.append((old_anchor + old_seen, lines[index]))
                     index += 1
                 if old_seen > old_count or new_seen > new_count:
                     raise UnboundedPatch("hunk length mismatch")
             if not changes:
                 raise UnboundedPatch("hunk has no edits")
-            hunks += 1
+            hunks.append(hunk)
         if not hunks:
             raise UnboundedPatch("no hunks")
-        paths.append(before)
-    return set(paths)
+        if before in paths:
+            raise UnboundedPatch("duplicate diff section")
+        paths[before] = hunks
+    return paths
+
+def affected_files(raw):
+    return set(parse_patch(raw))
 
 class FileSelector:
     def __init__(self, tests, map_path):
@@ -101,7 +110,7 @@ class FileSelector:
             if self.data["revision"] != REVISION or self.data["schema"] != 1:
                 raise ValueError("map revision/schema mismatch")
             self._index()
-        except (OSError, ValueError, KeyError, TypeError, IndexError) as error:
+        except (OSError, EOFError, ValueError, KeyError, TypeError, IndexError) as error:
             self.problem = "maps unavailable or invalid: " + type(error).__name__
 
     def _index(self):
