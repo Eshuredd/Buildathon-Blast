@@ -1,0 +1,21 @@
+# RWX Blast Radius
+
+## Scope and authority
+
+Build a competitive, original test selector for Builders Buildathon 2026. Read the [official brief](https://www.joinbuilders.org/buildathon/tracks/blast-radius), the starter's SCORING.md, and the starter kit before editing the selector. Confirm access and record the sources in RESULTS.md. Use the official brief and SCORING.md for contest requirements. Flag any conflict with these prompts and continue under the published rules within the user's authorization. If required material is inaccessible, report the missing source and which work it blocks.
+
+Work solo, locally, and CPU-only. Work from a WSL2 Linux filesystem directory on Windows 11, with Docker available from the WSL shell. Use Linux paths, LF line endings, and Docker's linux/amd64 platform. Preserve the original diff bytes and normalize path separators for lookups. Keep Git changes local. Ask for explicit permission before publishing or pushing a repository, submitting an attempt, or provisioning paid infrastructure.
+
+## Integrity and reproducibility
+
+Each patch starts from SQLGlot commit eb11aec4be8cb2122afe713a4816662c3f0fb2fa. Generate reusable maps from that revision and key them by pytest node ID. Sample and independent patch labels belong only in the evaluation harness. Keep patch identities and expected answers out of feature generation and runtime decisions. Commit compact maps and their reproducible generation scripts. Exclude raw coverage, upstream source checkouts, sample labels, and private holdout material from the submission tree and image.
+
+Use the starter's pinned image, requirements.lock, and SKIP_INTEGRATION=0 for reference pytest runs. Bootstrap may fetch the official starter, pinned SQLGlot source, and dependencies. Submission build downloads are limited to public package registries (PyPI, npm, Docker Hub), GitHub releases at fixed tags, and SQLGlot at the pinned revision, as specified by the brief. Runtime network is disabled. Keep the tracked submission under 20 MB and measure it after map generation and before handoff.
+
+## Selection and scoring
+
+For local candidate selection, require valid output and compliance with the limits, then prefer fewer missed commits on development data, then lower official total. Before packaging, apply the Phase 3 independent holdout gate to the frozen deterministic selector. Any holdout miss fails the gate. Use SCORING.md as the authority for the contest score. The current per-run total is simulated seconds plus container CPU seconds. Simulated seconds include the largest worker load and 2 seconds per nonempty worker for each patch, plus 300 seconds per missed commit. Report local recall-first ranking separately if it differs from official score order. For comparable timing runs, report the median of three valid totals with the rounding specified in SCORING.md. Use 150.3 s as a practice reference only. Read test numbers and durations from the runtime manifest. Convert durations with round(seconds * 1000). Emit one compact UTF-8 JSON line per patch with exactly commit and workers. Emit only valid, unique test numbers per patch, up to eight workers, and use [] for zero selected tests. Send logs to stderr and keep stdout under 2 MB.
+
+If a manifest node in an affected test file lacks a map entry, include all manifest tests from that file. If the full patch cannot be parsed, or an affected file or dependency cannot be bounded reliably, select the full suite. Reuse the starter structure where practical. Apply the starter Makefile's Docker flags, including two CPUs, 4 GB RAM, a read-only root, a 64 MB /tmp, no network, UID/GID 65534, HOME=/tmp, and the 256-process cap. Check the 180 s practice and 270 s final budgets against the applicable local batch sizes and identify simulated batch sizes as such.
+
+Record actual results in RESULTS.md with columns for version, batch, missed commits, simulated seconds, container CPU seconds, official total, wall seconds, and stdout bytes. Record run environment, commands, and any unverified checks. Report container user plus system CPU separately from wall time. Keep the best verified local version available. Execute one requested phase at a time and stop at its checkpoint.
