@@ -1,9 +1,12 @@
-# RWX Blast Radius — Phase 3
+# RWX Blast Radius
 
 A deterministic test selector for SQLGlot at
-eb11aec4be8cb2122afe713a4816662c3f0fb2fa. This is a Phase 3 candidate awaiting verification on the independent holdout.
+eb11aec4be8cb2122afe713a4816662c3f0fb2fa. The verified selector reference is
+cda723539a174fc94444474fc7c69f35927763bb. It passed the independent
+holdout with zero missed failing commits across four patches.
 
-Run from the WSL2 Linux filesystem checkout at /home/eshum/Buildathon-Blast.
+Run the following from the checkout root on a Linux filesystem. The reference
+environment is WSL2 Ubuntu with Docker Desktop and linux/amd64 images.
 
 ~~~bash
 make test
@@ -14,7 +17,23 @@ make control
 The starter/ directory is the unchanged official benchmark and is excluded from
 Git and the submission Docker context. Its score.py supplies local scoring.
 Download the official kit from the [track brief](https://www.joinbuilders.org/buildathon/tracks/blast-radius)
-if setting up another checkout; unpack it into an empty starter/.
+and unpack it into an empty starter/ directory.
+
+make sample runs the submission with the official runtime restrictions and
+prints simulated seconds and misses. make control runs the all-tests
+scheduler control. To compute CPU-inclusive local scores on WSL with Docker
+Desktop, use the benchmark harness with the unchanged starter scorer.
+
+~~~bash
+make build IMAGE=blast-review
+python3 tools/benchmark.py --root "$PWD" --image blast-review --version review-sample \
+  --evidence /tmp/blast-review
+~~~
+
+Each total adds container user and system CPU to simulated time. Simulated
+time is the busiest worker load per patch plus two seconds per occupied worker
+and a 300-second penalty per missed commit. The local contest-style result is
+the median of three valid totals, rounded half-up to 0.1 seconds.
 
 ## Runtime
 
@@ -53,14 +72,15 @@ workers on an equal cost. Identical selected sets reuse schedules within a
 batch. Output is compact JSON lines; logs go to stderr. An empty manifest
 produces workers: [].
 
-The container only includes the pinned Python base, runtime code and the compact
-maps. It has no source checkout, raw coverage, sample patches, or labels. Runtime
-network access is unnecessary.
+The root Dockerfile copies four runtime modules and two compact maps onto the
+pinned Python 3.13 base. The selector reads patches and the test manifest from
+read-only mounts and runs with networking disabled.
 
 ## Reproduce maps
 
 ~~~bash
-bash tools/regenerate.sh /home/eshum/blast-regeneration
+CACHE=/tmp/blast-regeneration
+bash tools/regenerate.sh "$CACHE"
 ~~~
 
 The target cache must be outside this checkout and must not already contain a
@@ -83,17 +103,29 @@ Python 3.12 and the same pinned source directory.
 
 ~~~bash
 python3 tools/generate_line_sites.py \
-  --source /home/eshum/blast-bootstrap/sqlglot-eb11aec4be8cb2122afe713a4816662c3f0fb2fa \
+  --source "$CACHE/sqlglot-eb11aec4be8cb2122afe713a4816662c3f0fb2fa" \
   --base-map maps/base-map.json.gz --out maps/return-sites.json.gz
 ~~~
 
 Coverage is observational and cannot prove every possible dependency. Static
-imports and broad fallbacks reduce that risk; Phase 3 must independently verify
-recall before packaging. Native-extension internals and non-Python file reads
-are not line traced. Unseen data paths and import behavior remain a risk.
+imports and broad fallbacks reduce that risk. Coverage of native extensions,
+non-Python file reads, and unobserved execution paths is limited.
 
 The tools/benchmark.py evaluation harness targets this Windows/WSL Docker Desktop
 environment. It calls the official scorer and uses an exclusive, retained
 parent cgroup in the Docker VM to measure complete user + system CPU after
 each scored container exits. It does not enter the submission image.
-See RESULTS.md for commands, all measurements, and limits.
+## Verification
+
+The Phase 3 holdout covered added code, a fixture change, an import-time
+failure, and an unaffected edit. The selector missed zero of three failing
+commits at a median total of 78.7 seconds. Four patches provide limited
+evidence for unseen contest commits. See [RESULTS.md](RESULTS.md) for
+the official sample, local runtime checks, image audit, and build measurements.
+
+## Credits and license
+
+The track, starter, and official scorer are provided by RWX and Builders
+Buildathon. SQLGlot is developed by Toby Mao and the SQLGlot contributors.
+Map generation uses pytest and coverage.py. This project's code is available
+under the [MIT License](LICENSE). Upstream projects retain their own licenses.

@@ -741,3 +741,171 @@ python3 tools/benchmark.py --root /home/eshum/Buildathon-Blast \
 The external evaluation directory contains the split ledger, evaluated file
 hashes, exact container commands, reference reports, and benchmark receipts.
 Phase 3 ends here before final packaging and submission.
+
+
+# Phase 4 — submission handoff for manual commit
+
+The proposed submission preserves all selector rules, scheduler code,
+parameters, maps, and the root Dockerfile from Phase 3 commit cda723539a174fc94444474fc7c69f35927763bb.
+Its holdout gate passed with zero of three expected failing commits missed
+across four independent patches and a 78.7-second median total. The reserve
+holdout was left sealed.
+
+The Phase 3 report above is preserved byte for byte from the Windows review
+folder. Its original SHA-256 is f18f95217131478f3b99ef30f8045487cf728094b945fe85b8459df606adfe50. The Windows checkout had recorded
+that report at 7bad744a403962b89fd0c3d34e2b56851fbeb766. The proposed updates to that checkout are
+LICENSE, README.md, and RESULTS.md. The MIT copyright line credits
+Buildathon-Blast contributors.
+
+The configured Windows remote is
+https://github.com/Eshuredd/Buildathon-Blast.git. A read-only remote check
+found its master tip at 7bad744a403962b89fd0c3d34e2b56851fbeb766. The local commit graph confirms the
+verified Phase 3 SHA is an ancestor of that remote tip. There is no final
+Phase 4 commit SHA at this manual handoff.
+
+## Build and payload verification
+
+The official brief was fetched again and all 39 files from the original
+starter archive were verified against the extracted kit. The unchanged
+starter's score.py and SCORING.md govern these local results.
+
+The fresh validation build of the intended submission snapshot completed
+in **13.50 seconds**, linux/amd64. It used a dedicated BuildKit
+v0.24.0 builder with a verified four-CPU quota and 8 GiB memory and memory-swap
+caps. WSL exposed about 7.46 GiB of total memory. The command enforced a
+600-second deadline and used --no-cache and --pull. The only build downloads
+were the pinned Python base and the fixed-tag BuildKit builder from Docker
+Hub. The root Dockerfile has no downloads in its instructions and the build
+steps ran with --network none. No packages or SQLGlot checkout were fetched
+for the submission build.
+
+Validation image ID is sha256:b77432a938499d3b90650d8848415869135eb62df2d7f4673f2df92cee8029be. The final snapshot is rebuilt
+cleanly after writing this report. The final-build receipt records its
+elapsed time, image ID and the comparison of its filesystem layers and
+runtime configuration with the benchmarked image. Build commands, logs,
+image inventories, and audit receipts are stored outside the submission
+at /home/eshum/blast-phase4-evidence.
+
+All 12 tests passed on the submission snapshot. The runtime copied into
+the image consists of selector.py, scheduler.py, impact.py, line_impact.py,
+and both compact maps. Each file matches the corresponding Phase 3 byte
+hash. The combined maps occupy 2,000,460 compressed bytes.
+
+## Runtime validation
+
+The official sample has 30 patches and serves as the local practice-size
+proxy. It runs with a 180-second timeout. The 45-patch simulated final batch
+repeats official sample patches in filename order with fresh opaque IDs
+and unchanged diff bytes. It runs with a 270-second timeout. The published
+brief gives an approximate final size of 1.5 times practice. The actual
+hidden batch sizes and recall remain unverified.
+
+Each batch ran in three fresh linux/amd64 containers. All six runs passed
+the official scorer. Stdout was byte-identical within each batch, and the
+official sample output also matched Phase 3 byte for byte. The runs applied
+the starter's two CPUs, 4 GiB memory, equal memory-swap limit, 256-process
+cap, no network, read-only root, 64 MiB /tmp, UID/GID 65534, HOME=/tmp,
+dropped capabilities, and no-new-privileges setting. Only patches and
+tests.json were mounted. The benchmark harness measured container user and
+system CPU from a dedicated retained cgroup and wall time from the Docker
+command. Each total includes simulated time plus container CPU.
+
+| Batch | Patches | Expected failing commits | Misses | Median total s | Rounded score s | Max wall s | Stdout bytes |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Official sample, practice-size proxy | 30 | 18 | 0 | 417.933429 | 417.9 | 1.120650 | 62,853 |
+| Simulated final batch | 45 | 26 | 0 | 683.264298 | 683.3 | 1.165182 | 103,164 |
+
+| Version | Batch | Run | Missed commits | Simulated s | Container user s | Container system s | Container CPU s | Official total s | Wall s | Stdout bytes |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Phase 4 exact runtime | Official sample, practice-size proxy | 1 | 0 | 417.095 | 0.560270 | 0.303085 | 0.863355 | 417.958355 | 1.102705 | 62,853 |
+| Phase 4 exact runtime | Official sample, practice-size proxy | 2 | 0 | 417.095 | 0.606467 | 0.231962 | 0.838429 | 417.933429 | 1.120650 | 62,853 |
+| Phase 4 exact runtime | Official sample, practice-size proxy | 3 | 0 | 417.095 | 0.566216 | 0.228994 | 0.795210 | 417.890210 | 1.056937 | 62,853 |
+| Phase 4 exact runtime | Simulated final batch | 1 | 0 | 682.415 | 0.547103 | 0.331934 | 0.879037 | 683.294037 | 1.165182 | 103,164 |
+| Phase 4 exact runtime | Simulated final batch | 2 | 0 | 682.415 | 0.559159 | 0.290139 | 0.849298 | 683.264298 | 1.126395 | 103,164 |
+| Phase 4 exact runtime | Simulated final batch | 3 | 0 | 682.415 | 0.568255 | 0.276187 | 0.844442 | 683.259442 | 1.144799 | 103,164 |
+
+The published 1614.1-second baseline and the 150.3-second practice reference
+remain separate from these measured local results.
+
+## Submission manifest and leakage audit
+
+The intended tree contains **27 files totaling 2,126,816 bytes**. This is
+the sum of file contents and stays below the 20,000,000-byte limit. The
+exact manifest includes every path, byte count, Git mode, and SHA-256,
+including this report, in
+/home/eshum/blast-phase4-evidence/submission-manifest.json. It was produced
+from the proposed tree without staging changes.
+
+The audit derived 30 official opaque commit IDs and
+30 patch filenames from the starter patch list and
+cross-checked the IDs against the answer index. The sample supplied
+0 full commit hashes. Blob hashes in unified
+diff headers are upstream file identities and do not identify patches.
+The scan checked all 27 intended paths and raw file contents for exact
+filename and whole ID tokens. It decompressed and parsed both gzip maps
+and scanned all 15,229,548 bytes of decoded
+JSON. The tree scan found **zero exact matches**.
+
+The image audit verified all four unchanged pinned-base layers and
+unpacked every added layer. It checked all added paths and contents,
+including both decoded maps, against the same tokens and verified exactly
+six expected runtime files with their SHA-256 hashes. It found **zero exact
+matches** and no additional payload. The build context contains no starter,
+raw coverage, upstream checkout, sample labels, or private holdout data.
+
+The full file set for the intended commit is:
+
+~~~text
+.dockerignore
+.gitattributes
+.gitignore
+AGENTS.md
+Dockerfile
+LICENSE
+Makefile
+README.md
+RESULTS.md
+impact.py
+line_impact.py
+maps/base-map.json.gz
+maps/generation-report.json
+maps/return-sites.json.gz
+requirements.lock
+scheduler.py
+selector.py
+tests/test_selector.py
+tools/Bootstrap.Dockerfile
+tools/benchmark.py
+tools/check_maps.py
+tools/collect_coverage.py
+tools/coverage-requirements.txt
+tools/coverage.ini
+tools/generate_line_sites.py
+tools/generate_maps.py
+tools/regenerate.sh
+~~~
+
+## Reproduction
+
+~~~bash
+# From the intended submission snapshot root.
+PYTHONDONTWRITEBYTECODE=1 make test
+docker buildx create --name blast-phase4-local --driver docker-container \
+  --driver-opt image=moby/buildkit:v0.24.0 --driver-opt memory=8g \
+  --driver-opt memory-swap=8g --driver-opt cpu-period=100000 \
+  --driver-opt cpu-quota=400000
+timeout --signal=TERM --kill-after=5s 600s docker buildx build \
+  --builder blast-phase4-local --platform linux/amd64 --no-cache --pull \
+  --network none --load --tag blast-phase4:submission .
+
+python3 tools/benchmark.py --root /home/eshum/Buildathon-Blast \
+  --image blast-phase4:submission --version phase4-official-sample \
+  --evidence /home/eshum/blast-phase4-evidence --timeout 180
+python3 tools/benchmark.py --root /home/eshum/Buildathon-Blast \
+  --image blast-phase4:submission --version phase4-simulated-final-45 \
+  --evidence /home/eshum/blast-phase4-evidence \
+  --sample /home/eshum/blast-phase4-evidence/simulated-final-45 --timeout 270
+~~~
+
+The benchmark harness and manifests are local review evidence. The report
+and submission files are ready for the user's manual commit and submission.
