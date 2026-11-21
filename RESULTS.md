@@ -631,3 +631,113 @@ both compressed maps. This is below the 20,000,000-byte cap. A second compile
 of the return-site map produced identical bytes. The Phase 3 files are present
 in the GitHub Desktop checkout and the WSL working tree, with both Git indexes
 unchanged.
+
+
+# Phase 3 — verification of the manual commit
+
+The independent holdout gate **passed** for commit cda723539a174fc94444474fc7c69f35927763bb. It
+missed 0 of 3 expected failing commits
+across 4 patches, for 100% commit recall
+and a median total of 78.665000 seconds
+(78.7 seconds after official rounding).
+This clears the Phase 3 gate. The small holdout leaves substantial uncertainty
+about hidden-batch recall.
+
+The commit was available in the local GitHub Desktop checkout. I cloned it
+from the local Windows filesystem and detached at that exact commit in
+/home/eshum/blast-phase3-eval/committed-checkout. All 26 tracked file blobs
+matched the prepared candidate. I recorded each file's SHA-256 before the
+primary holdout opened and verified the hashes and clean Git status again
+after scoring. The frozen linux/amd64 image used for development, holdout,
+and sample is sha256:012655af91f2af69283c291c51faf2835b83c3ecffc53435d99706b23e070c2c. All 12 checks passed on the clean checkout.
+The WSL and Windows working copies receive this report as a review edit
+outside the frozen checkout. The evaluated commit and image are unchanged.
+
+## Reference labels and cost
+
+The committed development benchmark finished before the primary archive
+opened. All four holdout patch hashes matched the pre-tuning split ledger.
+Each patch ran against its own fresh copy of the pinned base under the same
+reference environment and label rules as development.
+
+| Primary holdout case | Reference Docker wall s | Failing manifest tests | Collection errors | Numbered tests affected by collection |
+| --- | ---: | ---: | ---: | ---: |
+| added code | 122.970 | 5 | 0 | 0 |
+| fixture | 112.732 | 1 | 0 | 0 |
+| import-time | 101.929 | 6 | 1 | 6 |
+| unaffected | 103.331 | 0 | 0 | 0 |
+
+The reference runs used 959.37
+seconds of the 1800-second cap, including the base suite, and
+8 of the 30 patch slots. The four replacement
+patches remain sealed. All primary cases were labeled.
+
+## Committed development and primary holdout
+
+The first holdout scoring attempt was rejected with missing_commit because
+the mounted patch directory had mode 0700 and the restricted container user
+could not list it. The evaluation batch now has a private parent directory
+and a readable read-only patch mount. No patch contents, labels, image,
+or candidate files changed. The invalid attempt is excluded from timing.
+
+The unchanged official scorer validated three runs per batch. Simulated
+time includes the miss penalty. CPU is measured user plus system time
+in the container, and wall time covers the Docker command. Totals are rounded
+half-up to 0.1 seconds after taking the median of three.
+
+| Batch | Missed / expected | Patches | Commit recall | Median total s | Rounded local score s |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| development | 0 / 3 | 4 | 100% | 55.869103 | 55.9 |
+| primary holdout | 0 / 3 | 4 | 100% | 78.665000 | 78.7 |
+
+| Version and batch | Run | Misses | Simulated s | User CPU s | System CPU s | Container CPU s | Official total s | Wall s | Stdout bytes |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Committed candidate · development | 1 | 0 | 55.002 | 0.570177 | 0.296926 | 0.867103 | 55.869103 | 1.213285 | 360 |
+| Committed candidate · development | 2 | 0 | 55.002 | 0.568532 | 0.300661 | 0.869193 | 55.871193 | 1.151690 | 360 |
+| Committed candidate · development | 3 | 0 | 55.002 | 0.584940 | 0.199012 | 0.783952 | 55.785952 | 1.084113 | 360 |
+| Committed candidate · primary holdout | 1 | 0 | 77.820 | 0.572094 | 0.253623 | 0.825717 | 78.645717 | 1.128908 | 14,151 |
+| Committed candidate · primary holdout | 2 | 0 | 77.820 | 0.599404 | 0.245596 | 0.845000 | 78.665000 | 1.088439 | 14,151 |
+| Committed candidate · primary holdout | 3 | 0 | 77.820 | 0.590615 | 0.272071 | 0.862686 | 78.682686 | 1.114716 | 14,151 |
+
+## Official sample
+
+The same frozen image scored **417.9 seconds** on the official
+sample, with an unrounded median total of 417.921154 seconds.
+It missed 0 of 18 expected failing commits
+across 30 patches, for 100% commit recall.
+The sample was evaluated separately from the independent holdout. The
+published 1614.1-second baseline stays a separate contest reference.
+
+| Version and batch | Run | Misses | Simulated s | User CPU s | System CPU s | Container CPU s | Official total s | Wall s | Stdout bytes |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Committed candidate · official sample | 1 | 0 | 417.095 | 0.593391 | 0.307174 | 0.900565 | 417.995565 | 1.243033 | 62,853 |
+| Committed candidate · official sample | 2 | 0 | 417.095 | 0.606155 | 0.219999 | 0.826154 | 417.921154 | 1.063592 | 62,853 |
+| Committed candidate · official sample | 3 | 0 | 417.095 | 0.545591 | 0.251602 | 0.797193 | 417.892193 | 1.021789 | 62,853 |
+
+Stdout was byte-identical within each batch and remained under 2 MB. The
+official 30-patch sample ran under the 180-second limit. The earlier
+45-patch repeated-development run exercised the 270-second limit at a
+simulated batch size. Actual hidden practice and final budgets remain
+unverified.
+
+## Reproduction
+
+~~~bash
+cd /home/eshum/blast-phase3-eval/committed-checkout
+PYTHONDONTWRITEBYTECODE=1 make test
+docker build --platform linux/amd64 --tag blast-phase3-frozen:cda723539a17 .
+python3 tools/benchmark.py --root /home/eshum/Buildathon-Blast \
+  --evidence /home/eshum/blast-phase3-eval --image blast-phase3-frozen:cda723539a17 \
+  --version committed-development --sample /home/eshum/blast-phase3-eval/development
+python3 /home/eshum/blast-phase3-eval/label.py holdout --freeze-sha cda723539a174fc94444474fc7c69f35927763bb
+python3 tools/benchmark.py --root /home/eshum/Buildathon-Blast \
+  --evidence /home/eshum/blast-phase3-eval --image blast-phase3-frozen:cda723539a17 \
+  --version committed-holdout --sample /home/eshum/blast-phase3-eval/holdout
+python3 tools/benchmark.py --root /home/eshum/Buildathon-Blast \
+  --evidence /home/eshum/blast-phase3-eval --image blast-phase3-frozen:cda723539a17 \
+  --version committed-official-sample
+~~~
+
+The external evaluation directory contains the split ledger, evaluated file
+hashes, exact container commands, reference reports, and benchmark receipts.
+Phase 3 ends here before final packaging and submission.
